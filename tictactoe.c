@@ -16,6 +16,7 @@ enum {
 typedef struct move_s {
     struct move_s* up;
     struct move_s* down[9];
+    short int path;
     short int board[9];
     short int rank;
     short int turn;
@@ -81,6 +82,9 @@ move* initMiniMax(short int *currentBoard, int turn)
     for( i = 0; i < 9; i++ ) {
         initial->down[i] = NULL;
         initial->board[i] = currentBoard[i];
+        if( currentBoard[i] != 0 ) {
+            initial->path = i;
+        }
     }
 
     initial->rank = 0;
@@ -110,6 +114,7 @@ int buildMiniMax(move* initialMove)
                 return FAILURE;
             }
  
+            new->path = i;
             new->up = initialMove;
 
             for( j = 0; j < 9; j++ ) {
@@ -126,14 +131,20 @@ int buildMiniMax(move* initialMove)
                 new->turn = CPU;
             }
 
-            
             new->rank = iswinner( new->board );
+
+
+            if( new->rank == USERWIN && initialMove->up != NULL ) {
+//                this is broken for some reason
+//                destroyTree( initialMove->up->down[initialMove->path] );
+                initialMove->up->down[initialMove->path] = NULL;
+            }
+
             //rank of current board affects all boards higher in the tree
             for(temp = new->up; temp != NULL; temp = temp->up) {
                 temp->rank += new->rank;
             }
 
-            
             initialMove->down[i] = new;
 
             if ( new->rank == 0 ) {

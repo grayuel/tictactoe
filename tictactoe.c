@@ -147,6 +147,21 @@ int buildMiniMax(move* initialMove)
 
 
 
+int destroyTree( move *top )
+{
+    int i;
+    for( i = 0; i < 9; i++ ) {
+        if( top->down[i] != NULL ) {
+            destroyTree( top->down[i] );
+            top->down[i] = NULL;
+        }
+    }
+
+    free( top );
+    return SUCCESS;
+}
+
+
 
 
 tictactoe* initGame( void )
@@ -275,6 +290,8 @@ int gameLoop( tictactoe* game, move* initial )
             
             initial = current;
             current = current->down[optimalMove];
+            initial->down[optimalMove] = NULL;
+            destroyTree( initial );
             
             game->turn = CPU;
         }
@@ -292,6 +309,8 @@ int gameLoop( tictactoe* game, move* initial )
 
             initial = current;
             current = current->down[userMove];
+            initial->down[userMove] = NULL;
+            destroyTree( initial );
 
             game->turn = USER;
         }

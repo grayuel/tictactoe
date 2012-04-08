@@ -20,47 +20,51 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 enum {
-    SUCCESS = 1,
+    SUCCESS = 0,
     FAILURE = -2,
-    CPU = 4,
-    USER = 1,
-    INPROGRESS = 0,
-    DRAW = 0,
-    CPUWIN = 2,
-    USERWIN = -1
+
+    CPU = 4,            //value of a cpu occupied square
+    USER = 1,           //value of a user occupied square
+    UNOCCUPIED = 0,     //value of an unoccupied square
+
+    INPROGRESS = 0,     //      The four possible
+    DRAW = 0,           //      states of the game
+    CPUWIN = 2,         //
+    USERWIN = -1        //      Also used for ranking
 };
 
+//game tree struct
 typedef struct move_s {
-    struct move_s* up;
-    struct move_s* down[9];
-    short int path;
-    short int board[9];
-    short int rank;
-    short int turn;
+    struct move_s* up;          //pointer to parent
+    struct move_s* down[9];     //pointer to all possible children
+    short int path;             //what move led to the current branch
+    short int board[9];         //current board state
+    short int rank;             //rank of the current state
+    short int turn;             //whose turn led to this state
 }move;
 
+//game state struct
 typedef struct tictactoe_s {
-    short int board[9];
-    int winner;
-    int turn;
-    int status;
+    short int board[9];         //current board state
+    int turn;                   //who just went
+    int status;                 //is the game in progress, complete, etc.
 }tictactoe;
 
 
 
-
+//determines if there is a winner
 int iswinner(short int *board)
 {
 
     short int i;
-    short int sums[8] = { board[0] + board[1] + board[2],
-                          board[3] + board[4] + board[5], 
-                          board[6] + board[7] + board[8],
-                          board[0] + board[3] + board[6],
-                          board[1] + board[4] + board[7],
-                          board[2] + board[5] + board[8],
-                          board[0] + board[4] + board[8],
-                          board[2] + board[4] + board[6] };
+    short int sums[8] = { board[0] + board[1] + board[2],   //row 1
+                          board[3] + board[4] + board[5],   //row 2
+                          board[6] + board[7] + board[8],   //row 3
+                          board[0] + board[3] + board[6],   //col 1
+                          board[1] + board[4] + board[7],   //col 2
+                          board[2] + board[5] + board[8],   //col 3
+                          board[0] + board[4] + board[8],   //diag 1
+                          board[2] + board[4] + board[6] }; //diag 2
     for( i = 0; i < 8; i++ ) {
         //computer wins
         if ( sums[i] == CPU + CPU + CPU ) {
@@ -74,7 +78,7 @@ int iswinner(short int *board)
     
     //game still in progress
     for( i = 0; i < 9; i++ ) {
-        if ( board[i] == 0 ) {
+        if ( board[i] == UNOCCUPIED ) {
             return INPROGRESS;
         }
     }
@@ -87,7 +91,7 @@ int iswinner(short int *board)
 
 
 
-
+//build the top of the game tree
 move* initMiniMax(short int *currentBoard, int turn)
 {
     int i;
@@ -99,7 +103,7 @@ move* initMiniMax(short int *currentBoard, int turn)
     for( i = 0; i < 9; i++ ) {
         initial->down[i] = NULL;
         initial->board[i] = currentBoard[i];
-        if( currentBoard[i] != 0 ) {
+        if( currentBoard[i] != UNOCCUPIED ) {
             initial->path = i;
         }
     }
@@ -115,7 +119,7 @@ move* initMiniMax(short int *currentBoard, int turn)
 
 
 
-
+//build the entire game tree.
 int buildMiniMax(move* initialMove)
 {
     short int i,j;
@@ -125,12 +129,14 @@ int buildMiniMax(move* initialMove)
 
     for ( i = 0; i < 9; i++ ) {
 
-        if ( initialMove->board[i] == 0 ) {
-
+        if ( initialMove->board[i] == UNOCCUPIED ) {
+            
+            //allocate memory
             if ( ( new = malloc( sizeof( move ) ) ) == NULL ) {
                 return FAILURE;
             }
  
+            //initialize everything
             new->path = i;
             new->up = initialMove;
 
@@ -139,6 +145,7 @@ int buildMiniMax(move* initialMove)
                 new->board[j] = initialMove->board[j];
             }
 
+            //add the move to the board
             if( initialMove->turn == CPU ) {
                 new->board[i] = USER;
                 new->turn = USER;
@@ -148,9 +155,10 @@ int buildMiniMax(move* initialMove)
                 new->turn = CPU;
             }
 
+            //compute rank of current board
             new->rank = iswinner( new->board );
 
-
+            //if cpu move led directly to the a user win, delete that branch
             if( new->rank == USERWIN && initialMove->up != NULL ) {
 //                this is broken for some reason
 //                destroyTree( initialMove->up->down[initialMove->path] );
@@ -162,9 +170,11 @@ int buildMiniMax(move* initialMove)
                 temp->rank += new->rank;
             }
 
+            //connect created branch to the tree
             initialMove->down[i] = new;
 
-            if ( new->rank == 0 ) {
+            //if the game can continue from current branch, do so.
+            if ( new->rank == INPROGRESS ) {
                 buildMiniMax( new );
             }
         }
@@ -174,7 +184,7 @@ int buildMiniMax(move* initialMove)
 }
 
 
-
+//recursively free memory allocated to the tree.
 int destroyTree( move *top )
 {
     int i;
@@ -191,7 +201,7 @@ int destroyTree( move *top )
 
 
 
-
+//initialize the game struct
 tictactoe* initGame( void )
 {
     tictactoe* game = NULL;
@@ -206,21 +216,21 @@ tictactoe* initGame( void )
     }
     game->turn = USER;
     game->status = INPROGRESS;
-    game->winner = DRAW;
     return game;
 }
-    
-
+  
+  
+//draws the game, x for user, o for cpu, 1-9 for unoccupied squares
 void drawGame( tictactoe* game )
 {
     int i;
-    char *unoccupiedColor = "\033[0;37m";
-    char *userColor = "\033[0;32m";
-    char *cpuColor = "\033[0;31m";    
-    char *reset = "\033[0m";
+    char *unoccupiedColor = "\033[0;37m";   //gray
+    char *userColor = "\033[0;32m";         //green
+    char *cpuColor = "\033[0;31m";          //red 
+    char *reset = "\033[0m";                //reset
 
     for( i = 0; i < 9; i++ ) {
-        if( game->board[i] == 0 ) {
+        if( game->board[i] == UNOCCUPIED ) {
             printf("%s %i ", unoccupiedColor, i);
         }
         else if( game->board[i] == CPU ) {
@@ -238,6 +248,12 @@ void drawGame( tictactoe* game )
     printf("\n");
 }
 
+
+
+
+
+//gets the users move
+//need to fix double printing of the prompt, due to enter key I think.
 int getUserMove( tictactoe* game )
 {
     printf("Enter the number of an unoccupied square: ");
@@ -256,17 +272,20 @@ int getUserMove( tictactoe* game )
 
 
 
-
+//find the cpu move with the highest rank
 int cpuMove( move* current )  
 {
     short int i, rank; 
     short int choice = -1;
 
+    //set i equal to the first possible move
     for(i = 0; current->down[i] == NULL; i++ ) 
         ;  
 
+    //rank of first possible move
     rank = current->down[i]->rank;
 
+    //find a higher rank;
     for( ; i < 9; i++ ) {
         if ( current->down[i] != NULL ) {
             if ( rank <= current->down[i]->rank ) {
@@ -279,6 +298,10 @@ int cpuMove( move* current )
     return choice;
 }
 
+
+
+
+//prints a message saying who won.
 int printWinner( tictactoe* game )
 {
     if( iswinner( game->board ) == DRAW ) {
@@ -287,14 +310,18 @@ int printWinner( tictactoe* game )
     else if( iswinner( game->board ) == CPUWIN ) {
         printf("The computer won\n");
     }
-    else {
+    else if( iswinner( game->board ) == USERWIN ) { //this should never happen
         printf("The user won\n");
     }
+    else {
+        return FAILURE;
+    }
+
     return SUCCESS;
 }
 
 
-
+//the game loop, starts after the users first move
 int gameLoop( tictactoe* game, move* initial )
 {
     int optimalMove;
@@ -303,9 +330,9 @@ int gameLoop( tictactoe* game, move* initial )
     move *current = initial;
 
     while( game->status == INPROGRESS ) {
-        if (game->turn == USER ) { //user just went
+        if (game->turn == USER ) {              //user just went
 
-            //get optimal move, if there is in error, return.
+            //get optimal move, if there is in error, quit.
             if( ( optimalMove = cpuMove( current ) ) < 0 ) {
                 return FAILURE;
             }
@@ -315,7 +342,10 @@ int gameLoop( tictactoe* game, move* initial )
             game->board[optimalMove] = CPU;
 
             drawGame( game );
-            
+
+            //move to the branch of the cpu move
+            //disconnect from the old tree
+            //destroy the old tree           
             initial = current;
             current = current->down[optimalMove];
             initial->down[optimalMove] = NULL;
@@ -324,17 +354,23 @@ int gameLoop( tictactoe* game, move* initial )
             game->turn = CPU;
         }
 
+        //see if the cpu just won or drew
         game->status = iswinner( game->board );
 
+        //cpu just went, game still not over
         if( game->turn == CPU && game->status == INPROGRESS ) {
 
             //get user move, keep trying if failure
             while( ( userMove = getUserMove( game ) ) == FAILURE )
                 ;
+
             game->board[userMove] = USER;
             
             drawGame( game );
 
+            //move to the branch of the cpu move
+            //disconnect from the old tree
+            //destroy the old tree           
             initial = current;
             current = current->down[userMove];
             initial->down[userMove] = NULL;
@@ -343,9 +379,12 @@ int gameLoop( tictactoe* game, move* initial )
             game->turn = USER;
         }
         
+        //check for winner again
         game->status = iswinner( game->board );
     }
 }
+
+
 
 
 

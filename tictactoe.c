@@ -92,7 +92,7 @@ int iswinner(short int *board)
 
 
 //build the top of the game tree
-move* initMiniMax(short int *currentBoard, int turn)
+move* initGameTree(short int *currentBoard, int turn)
 {
     int i;
 
@@ -120,7 +120,7 @@ move* initMiniMax(short int *currentBoard, int turn)
 
 
 //build the entire game tree.
-int buildMiniMax(move* initialMove)
+int buildGameTree(move* initialMove)
 {
     short int i,j;
 
@@ -175,7 +175,7 @@ int buildMiniMax(move* initialMove)
 
             //if the game can continue from current branch, do so.
             if ( new->rank == INPROGRESS ) {
-                buildMiniMax( new );
+                buildGameTree( new );
             }
         }
     }
@@ -382,6 +382,7 @@ int gameLoop( tictactoe* game, move* initial )
         //check for winner again
         game->status = iswinner( game->board );
     }
+    destroyTree( initial );
 }
 
 
@@ -408,16 +409,17 @@ int main()
 
     //make the top of the tree, if it fails, quit.
     move *initial = NULL;
-    if ( ( initial = initMiniMax( game->board, USER ) ) == NULL ) {
+    if ( ( initial = initGameTree( game->board, USER ) ) == NULL ) {
         return FAILURE;
     }
 
     //build the tree, if it fails, quit.
-    if( ( buildMiniMax( initial ) ) == FAILURE ) {
+    if( ( buildGameTree( initial ) ) == FAILURE ) {
         return FAILURE;
     }
 
     gameLoop( game, initial );
 
     printWinner( game );
+    
 }

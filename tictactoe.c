@@ -28,7 +28,7 @@ enum {
     UNOCCUPIED = 0,     //value of an unoccupied square
 
     INPROGRESS = 0,     //      The four possible
-    DRAW = 0,           //      states of the game
+    DRAW = 1,           //      states of the game
     CPUWIN = 2,         //
     USERWIN = -1        //      Also used for ranking
 };
@@ -86,6 +86,26 @@ int iswinner(short int *board)
     //draw
     return DRAW;
 }
+
+
+
+
+
+
+//recursively free memory allocated to the tree.
+void destroyTree( move *top )
+{
+    if( top != NULL ) {
+        int i;
+        for( i = 0; i < 9; i++ ) {
+            if( top->down[i] != NULL ) {
+                destroyTree( top->down[i] );
+            }
+        }
+    }
+    free( top );
+}
+
 
 
 
@@ -188,22 +208,6 @@ int buildGameTree(move* initialMove)
 }
 
 
-//currently broken
-//recursively free memory allocated to the tree.
-int destroyTree( move *top )
-{
-    if( top != NULL ) {
-        int i;
-        for( i = 0; i < 9; i++ ) {
-            if( top->down[i] != NULL ) {
-                destroyTree( top->down[i] );
-                top->down[i] = NULL;
-            }
-        }
-    }
-//    free( top );
-    return SUCCESS;
-}
 
 
 
@@ -265,7 +269,7 @@ int getUserMove( tictactoe* game )
     printf("Enter the number of an unoccupied square: ");
     char userMove = getchar();
     if( userMove - '0' < 9 && userMove - '0' >= 0 ) {
-        if( (game->board[userMove - '0']) == 0 ) {
+        if( (game->board[userMove - '0']) == UNOCCUPIED ) {
             printf("You picked %d\n", userMove - '0');
             return userMove - '0';
         }
@@ -295,7 +299,6 @@ int cpuMove( move* current )
     for( ; i < 9; i++ ) {
         if ( current->down[i] != NULL ) {
             if ( rank <= current->down[i]->rank ) {
-                printf("ranks: %d\n", rank);
                 rank = current->down[i]->rank;
                 choice = i;
             }
@@ -388,6 +391,7 @@ int gameLoop( tictactoe* game, move* initial )
         //check for winner again
         game->status = iswinner( game->board );
     }
+    destroyTree( current );
     return( game->status );
 }
 
@@ -423,8 +427,5 @@ int main()
     if( ( buildGameTree( initial ) ) == FAILURE ) {
         return FAILURE;
     }
-
     printWinner( gameLoop( game, initial ) );
-
-    destroyTree( initial );
 }

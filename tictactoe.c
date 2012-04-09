@@ -160,7 +160,7 @@ int buildGameTree(move* initialMove)
 
             //if cpu move led directly to the a user win, delete that branch
             if( new->rank == USERWIN && initialMove->up != NULL ) {
-//                this is broken for some reason
+//                destroyTree does not currently work.
 //                destroyTree( initialMove->up->down[initialMove->path] );
                 initialMove->up->down[initialMove->path] = NULL;
             }
@@ -184,6 +184,7 @@ int buildGameTree(move* initialMove)
 }
 
 
+//currently broken
 //recursively free memory allocated to the tree.
 int destroyTree( move *top )
 {
@@ -302,15 +303,15 @@ int cpuMove( move* current )
 
 
 //prints a message saying who won.
-int printWinner( tictactoe* game )
+int printWinner( int winner )
 {
-    if( iswinner( game->board ) == DRAW ) {
+    if( winner == DRAW ) {
         printf("The game was a draw\n");
     }
-    else if( iswinner( game->board ) == CPUWIN ) {
+    else if( winner == CPUWIN ) {
         printf("The computer won\n");
     }
-    else if( iswinner( game->board ) == USERWIN ) { //this should never happen
+    else if( winner == USERWIN ) { //this should never happen
         printf("The user won\n");
     }
     else {
@@ -382,7 +383,8 @@ int gameLoop( tictactoe* game, move* initial )
         //check for winner again
         game->status = iswinner( game->board );
     }
-    destroyTree( initial );
+//    destroyTree( initial );
+    return( game->status );
 }
 
 
@@ -418,8 +420,5 @@ int main()
         return FAILURE;
     }
 
-    gameLoop( game, initial );
-
-    printWinner( game );
-    
+    printWinner( gameLoop( game, initial ) );
 }

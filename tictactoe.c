@@ -123,6 +123,7 @@ move* initGameTree(short int *currentBoard, int turn)
 int buildGameTree(move* initialMove)
 {
     short int i,j;
+    int delFlag = 0;
 
     move *new = NULL;
     move *temp = NULL;
@@ -160,9 +161,7 @@ int buildGameTree(move* initialMove)
 
             //if cpu move led directly to the a user win, delete that branch
             if( new->rank == USERWIN && initialMove->up != NULL ) {
-//                destroyTree does not currently work.
-//                destroyTree( initialMove->up->down[initialMove->path] );
-                initialMove->up->down[initialMove->path] = NULL;
+                delFlag = 1;
             }
 
             //rank of current board affects all boards higher in the tree
@@ -179,6 +178,11 @@ int buildGameTree(move* initialMove)
             }
         }
     }
+
+    if( delFlag == 1 ) {
+        destroyTree( initialMove->up->down[initialMove->path] );
+        initialMove->up->down[initialMove->path] = NULL;
+    }
     
     return SUCCESS;
 }
@@ -188,15 +192,16 @@ int buildGameTree(move* initialMove)
 //recursively free memory allocated to the tree.
 int destroyTree( move *top )
 {
-    int i;
-    for( i = 0; i < 9; i++ ) {
-        if( top->down[i] != NULL ) {
-            destroyTree( top->down[i] );
-            top->down[i] = NULL;
+    if( top != NULL ) {
+        int i;
+        for( i = 0; i < 9; i++ ) {
+            if( top->down[i] != NULL ) {
+                destroyTree( top->down[i] );
+                top->down[i] = NULL;
+            }
         }
     }
-
-    free( top );
+//    free( top );
     return SUCCESS;
 }
 
@@ -383,7 +388,6 @@ int gameLoop( tictactoe* game, move* initial )
         //check for winner again
         game->status = iswinner( game->board );
     }
-//    destroyTree( initial );
     return( game->status );
 }
 
@@ -421,4 +425,6 @@ int main()
     }
 
     printWinner( gameLoop( game, initial ) );
+
+    destroyTree( initial );
 }
